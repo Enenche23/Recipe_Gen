@@ -1,8 +1,11 @@
 [build]
-  command = "cd client && npm run build"
-  publish = "client/build"
+  base = "client"
+  command = "npm run build"
+  publish = "build"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[build.environment]
+  # Optionally add env variables here if you have frontend ones
+  # REACT_APP_API_URL = "https://your-api-url.com"
+
+[context.production.environment]
+  NODE_VERSION = "18"
