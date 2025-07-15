@@ -100,7 +100,8 @@ function App() {
   const initializeEventStream = useCallback(() => {
     if (!recipeData) return;
     const queryParams = new URLSearchParams(recipeData).toString();
-    const url = `http://lhttps://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
+    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
+
 
     console.log('Connecting to:', url);
 
