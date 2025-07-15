@@ -1,7 +1,5 @@
-/** App.js (Connected to backend for recipe generation) **/
-
 import './App.css';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useState } from 'react';
 
 const RecipeCard = ({ onSubmit }) => {
   const [ingredients, setIngredients] = useState('');
@@ -86,65 +84,42 @@ const RecipeCard = ({ onSubmit }) => {
 };
 
 function App() {
-  const [recipeData, setRecipeData] = useState(null);
   const [recipeText, setRecipeText] = useState('');
-  const eventSourceRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
-  const closeEventStream = () => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-  };
+  const onSubmit = async (data) => {
+    setLoading(true);
+    setRecipeText(''); // clear previous recipe
 
-  const initializeEventStream = useCallback(() => {
-    if (!recipeData) return;
-    const queryParams = new URLSearchParams(recipeData).toString();
-    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
+    try {
+      const queryParams = new URLSearchParams(data).toString();
+      const url = `https://recipe-backend-47av.onrender.com/recipe?${queryParams}`;
+      console.log('Fetching from:', url);
 
+      const response = await fetch(url);
+      const result = await response.json();
 
-    console.log('Connecting to:', url);
-
-    eventSourceRef.current = new EventSource(url);
-
-    eventSourceRef.current.onmessage = (event) => {
-      console.log('Received:', event.data);
-      const data = JSON.parse(event.data);
-
-      if (data.action === 'close') {
-        closeEventStream();
-      } else if (data.action === 'chunk') {
-        setRecipeText((prev) => prev + data.chunk);
+      if (result.recipe) {
+        setRecipeText(result.recipe);
+      } else {
+        setRecipeText('Failed to generate recipe.');
       }
-    };
-
-    eventSourceRef.current.onerror = (err) => {
-      console.error('EventSource error:', err);
-      closeEventStream();
-    };
-  }, [recipeData]);
-
-  useEffect(() => {
-    if (recipeData) {
-      setRecipeText('');
-      closeEventStream();
-      initializeEventStream();
+    } catch (error) {
+      console.error('Fetch error:', error);
+      setRecipeText('Error generating recipe.');
     }
-  }, [recipeData, initializeEventStream]);
 
-  const onSubmit = (data) => {
-    const formattedData = {
-      ...data,
-      ingredients: data.ingredients.trim()
-    };
-    setRecipeData(formattedData);
+    setLoading(false);
   };
 
   return (
     <div className='app-container'>
       <RecipeCard onSubmit={onSubmit} />
       <div className='recipe-output'>
-        {recipeText || <span className='placeholder-text'>Your recipe will appear here...</span>}
+        {loading
+          ? <span className='placeholder-text'>Generating recipe...</span>
+          : (recipeText || <span className='placeholder-text'>Your recipe will appear here...</span>)
+        }
       </div>
     </div>
   );
