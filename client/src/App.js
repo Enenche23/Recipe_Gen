@@ -1,7 +1,9 @@
+/** App.js (using /recipe endpoint, no stream) **/
+
 import './App.css';
 import React, { useState } from 'react';
 
-const RecipeCard = ({ onSubmit }) => {
+const RecipeCard = ({ onSubmit, loading }) => {
   const [ingredients, setIngredients] = useState('');
   const [mealType, setMealType] = useState('');
   const [cuisine, setCuisine] = useState('');
@@ -23,6 +25,7 @@ const RecipeCard = ({ onSubmit }) => {
   return (
     <div className='recipe-card'>
       <h2 className='recipe-title'>🍽️ Recipe Generator</h2>
+
       <label htmlFor='ingredients'>Ingredients</label>
       <input
         type='text'
@@ -76,8 +79,8 @@ const RecipeCard = ({ onSubmit }) => {
         <option value='Advanced'>Advanced</option>
       </select>
 
-      <button onClick={handleSubmit} className='generate-btn'>
-        Generate Recipe
+      <button onClick={handleSubmit} className='generate-btn' disabled={loading}>
+        {loading ? 'Generating...' : 'Generate Recipe'}
       </button>
     </div>
   );
@@ -86,40 +89,41 @@ const RecipeCard = ({ onSubmit }) => {
 function App() {
   const [recipeText, setRecipeText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const onSubmit = async (data) => {
     setLoading(true);
-    setRecipeText(''); // clear previous recipe
+    setError('');
+    setRecipeText('');
+
+    const queryParams = new URLSearchParams(data).toString();
+    const url = `https://recipe-backend-47av.onrender.com/recipe?${queryParams}`;
+
+    console.log('Fetching from:', url);
 
     try {
-      const queryParams = new URLSearchParams(data).toString();
-      const url = `https://recipe-backend-47av.onrender.com/recipe?${queryParams}`;
-      console.log('Fetching from:', url);
-
       const response = await fetch(url);
+      if (!response.ok) throw new Error('Error generating recipe');
       const result = await response.json();
-
-      if (result.recipe) {
-        setRecipeText(result.recipe);
-      } else {
-        setRecipeText('Failed to generate recipe.');
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      setRecipeText('Error generating recipe.');
+      setRecipeText(result.recipe || '');
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError('Error generating recipe. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <div className='app-container'>
-      <RecipeCard onSubmit={onSubmit} />
+      <RecipeCard onSubmit={onSubmit} loading={loading} />
       <div className='recipe-output'>
-        {loading
-          ? <span className='placeholder-text'>Generating recipe...</span>
-          : (recipeText || <span className='placeholder-text'>Your recipe will appear here...</span>)
-        }
+        {loading && <span className='placeholder-text'>Loading...</span>}
+        {error && <span className='error-text'>{error}</span>}
+        {!loading && !error && recipeText && <pre>{recipeText}</pre>}
+        {!loading && !error && !recipeText && (
+          <span className='placeholder-text'>Your recipe will appear here...</span>
+        )}
       </div>
     </div>
   );
