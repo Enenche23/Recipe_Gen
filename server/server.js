@@ -1,3 +1,4 @@
+// server/server.js
 const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -6,47 +7,50 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Middleware
+// Enable JSON and URL encoding
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS: allow frontend (adjust if deployed)
+// ✅ CORS: allow both localhost (for dev) and Netlify (for prod)
 app.use(cors({
-  origin: '*', // Or set to your frontend URL e.g., 'https://your-frontend.netlify.app'
+  origin: [
+    'http://localhost:3000',
+    'https://ejeh-recipe-gen-app.netlify.app'
+  ],
   credentials: true
 }));
 
-// Root route
+// Simple test route
 app.get("/", (req, res) => {
-  res.json({ message: "Server is working!" });
+  res.json({ message: "✅ Recipe Generator backend is working!" });
 });
 
-// Recipe generation route (simple fetch, no streaming)
+// ✅ New /recipe endpoint: single-response (not streaming)
 app.get("/recipe", async (req, res) => {
   const { ingredients, mealType, cuisine, cookingTime, complexity } = req.query;
 
   const prompt = [
-    "Generate a recipe with these details:",
+    "Generate a recipe that incorporates the following details:",
     `Ingredients: ${ingredients}`,
     `Meal Type: ${mealType}`,
     `Cuisine Preference: ${cuisine}`,
     `Cooking Time: ${cookingTime}`,
     `Complexity: ${complexity}`,
-    "Please provide a detailed recipe, including preparation and cooking steps. Only use the ingredients listed. Give the recipe a culturally relevant name."
+    "Please provide a detailed recipe, including preparation and cooking steps.",
+    "Only use the ingredients listed. Give the recipe a culturally relevant name."
   ].join(" ");
 
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
-    const recipe = result.response.text();
+    const text = result.response.text();
 
-    res.json({ recipe });
+    res.json({ recipe: text });
   } catch (err) {
-    console.error('Error generating recipe:', err);
-    res.status(500).json({ error: "Failed to generate recipe" });
+    console.error('❌ Error generating recipe:', err);
+    res.status(500).json({ error: "Error generating recipe" });
   }
 });
 
