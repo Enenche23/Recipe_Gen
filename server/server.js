@@ -6,21 +6,18 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Allow frontend to access backend (Netlify or localhost)
+// CORS - allow all origins for testing
 app.use(cors({
-  origin: '*',   // in production you can replace * with your frontend URL
+  origin: '*',
   credentials: true
 }));
 
-// Default route
 app.get("/", (req, res) => {
   res.json({ message: "Server is running!" });
 });
 
-// NEW: /recipe endpoint (simple, non-streaming)
 app.get("/recipe", async (req, res) => {
   try {
     const { ingredients, mealType, cuisine, cookingTime, complexity } = req.query;
@@ -42,12 +39,11 @@ app.get("/recipe", async (req, res) => {
 
     res.json({ recipe: text });
   } catch (error) {
-    console.error('Error generating recipe:', error);
-    res.status(500).json({ error: "Failed to generate recipe" });
+    console.error('Error generating recipe:', error); // 💡 SEE THE REAL ERROR IN Render LOGS
+    res.status(500).json({ error: "Error generating recipe" });
   }
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });

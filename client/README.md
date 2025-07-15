@@ -1,25 +1,18 @@
 # 🍽️ Recipe Generator App
 
-A React + Node.js app that generates recipes using OpenAI.
+An AI-powered app that generates culturally relevant recipes from your chosen ingredients, meal type, cuisine, cooking time, and complexity.
 
-## 📦 Project Structure
-- `client/` – React frontend
-- `server/` – Express backend connecting to OpenAI
+## ✨ Features
+- Uses Google Gemini AI to generate detailed recipes.
+- Streams results in real-time.
+- Deployed frontend on Netlify and backend on Render.
 
-## 🚀 Setup & Run Locally
+## ⚙️ Tech Stack
+- React.js
+- Node.js + Express
+- Google Generative AI
+- Render & Netlify
 
-```bash
-git clone https://github.com/Enenche23/Recipe_Gen.git
-cd Recipe_Gen
-
-# 🍽️ Recipe_Gen
-
-An AI-powered recipe generator with React frontend and Node.js + OpenAI backend.
-
-## 🚀 Getting Started
-
-### Clone the project
-```bash
-git clone https://github.com/Enenche23/Recipe_Gen.git
-cd Recipe_Gen
-
+## 🚀 How to run locally
+1. Clone the repo
+2. Add `.env` in server:

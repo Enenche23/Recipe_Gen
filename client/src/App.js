@@ -1,9 +1,9 @@
-/** App.js (using /recipe endpoint, no stream) **/
+/** App.js **/
 
 import './App.css';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
-const RecipeCard = ({ onSubmit, loading }) => {
+const RecipeCard = ({ onSubmit }) => {
   const [ingredients, setIngredients] = useState('');
   const [mealType, setMealType] = useState('');
   const [cuisine, setCuisine] = useState('');
@@ -25,7 +25,6 @@ const RecipeCard = ({ onSubmit, loading }) => {
   return (
     <div className='recipe-card'>
       <h2 className='recipe-title'>🍽️ Recipe Generator</h2>
-
       <label htmlFor='ingredients'>Ingredients</label>
       <input
         type='text'
@@ -79,49 +78,125 @@ const RecipeCard = ({ onSubmit, loading }) => {
         <option value='Advanced'>Advanced</option>
       </select>
 
-      <button onClick={handleSubmit} className='generate-btn' disabled={loading}>
-        {loading ? 'Generating...' : 'Generate Recipe'}
+      <button onClick={handleSubmit} className='generate-btn'>
+        Generate Recipe
       </button>
     </div>
   );
 };
 
 function App() {
+  const [recipeData, setRecipeData] = useState(null);
   const [recipeText, setRecipeText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const eventSourceRef = useRef(null);
 
-  const onSubmit = async (data) => {
-    setLoading(true);
-    setError('');
-    setRecipeText('');
-
-    const queryParams = new URLSearchParams(data).toString();
-    const url = `https://recipe-backend-47av.onrender.com/recipe?${queryParams}`;
-
-    console.log('Fetching from:', url);
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Error generating recipe');
-      const result = await response.json();
-      setRecipeText(result.recipe || '');
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Error generating recipe. Please try again.');
-    } finally {
-      setLoading(false);
+  const closeEventStream = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
+  };
+
+  const initializeEventStream = useCallback(() => {
+    if (!recipeData) return;
+
+    const queryParams = new URLSearchParams(recipeData).toString();
+    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
+
+    console.log('Connecting to:', url);
+    setIsLoading(true);
+
+    eventSourceRef.current = new EventSource(url);
+
+    eventSourceRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.action === 'close') {
+        closeEventStream();
+        setIsLoading(false);
+      } else if (data.action === 'chunk') {
+        setRecipeText((prev) => prev + data.chunk);
+      }
+    };
+
+    eventSourceRef.current.onerror = (err) => {
+      console.error('EventSource error:', err);
+      closeEventStream();
+      setIsLoading(false);
+    };
+  }, [recipeData]);
+
+  useEffect(() => {
+    if (recipeData) {
+      setRecipeText('');
+      closeEventStream();
+      initializeEventStream();
+    }
+  }, [recipeData, initializeEventStream]);
+
+  const onSubmit = (data) => {
+    setRecipeData({
+      ...data,
+      ingredients: data.ingredients.trim()
+    });
+  };
+
+  const downloadPDF = (text) => {
+    const element = document.createElement('a');
+    const file = new Blob([text], { type: 'application/pdf' });
+    element.href = URL.createObjectURL(file);
+    element.download = 'recipe.pdf';
+    document.body.appendChild(element);
+    element.click();
+  };
+
+  const formatRecipeText = (text) => {
+    if (!text) return null;
+    return text.split('\n').map((line, idx) => {
+      const parts = line.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const clean = part.slice(2, -2);
+          return <strong key={i} className="bold-text">{clean}</strong>;
+        }
+        return part;
+      });
+      return <div key={idx}>{parts}</div>;
+    });
   };
 
   return (
     <div className='app-container'>
-      <RecipeCard onSubmit={onSubmit} loading={loading} />
+      <RecipeCard onSubmit={onSubmit} />
+
+      <div className='recipe-actions'>
+        <button onClick={() => setRecipeText('')} className='action-btn' disabled={!recipeText}>
+          🧹 Clear
+        </button>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(recipeText || '');
+            alert('✅ Recipe copied to clipboard!');
+          }}
+          className='action-btn'
+          disabled={!recipeText}
+        >
+          📋 Copy
+        </button>
+        <button
+          onClick={() => downloadPDF(recipeText)}
+          className='action-btn'
+          disabled={!recipeText}
+        >
+          📄 Save as PDF
+        </button>
+      </div>
+
       <div className='recipe-output'>
-        {loading && <span className='placeholder-text'>Loading...</span>}
-        {error && <span className='error-text'>{error}</span>}
-        {!loading && !error && recipeText && <pre>{recipeText}</pre>}
-        {!loading && !error && !recipeText && (
+        {isLoading ? (
+          <span className='placeholder-text'>🍳 Generating your recipe...</span>
+        ) : recipeText ? (
+          formatRecipeText(recipeText)
+        ) : (
           <span className='placeholder-text'>Your recipe will appear here...</span>
         )}
       </div>
