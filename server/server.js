@@ -1,46 +1,77 @@
-const express = require('express');
-const cors = require('cors');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-require('dotenv').config();
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.OPENAI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// CORS - allow all origins for testing
 app.use(cors({
-  origin: '*',
-  credentials: true
+  origin: '*', // allow all origins (or replace with your frontend URL for security)
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
 }));
 
-app.get("/", (req, res) => {
-  res.json({ message: "Server is running!" });
+// Simple health check
+app.get('/', (req, res) => {
+  res.send('✅ Recipe backend is running!');
 });
 
-app.get("/recipe", async (req, res) => {
+// 🧩 New streaming route
+app.get('/recipeStream', async (req, res) => {
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+
   try {
-    const { ingredients, mealType, cuisine, cookingTime, complexity } = req.query;
+    const prompt = `
+      Generate a step-by-step ${req.query.mealType} recipe.
+      Cuisine: ${req.query.cuisine}.
+      Cooking time: ${req.query.cookingTime}.
+      Complexity: ${req.query.complexity}.
+      Use these ingredients: ${req.query.ingredients}.
+      Make steps clear and structured.
+    `;
 
-    const prompt = [
-      "Generate a recipe that includes the following:",
-      `Ingredients: ${ingredients}`,
-      `Meal Type: ${mealType}`,
-      `Cuisine Preference: ${cuisine}`,
-      `Cooking Time: ${cookingTime}`,
-      `Complexity: ${complexity}`,
-      "Provide detailed preparation and cooking steps. Use only the given ingredients. Give it a culturally relevant name."
-    ].join(" ");
+    const result = await model.generateContentStream([prompt]);
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      res.write(`data: ${JSON.stringify({ action: 'chunk', chunk: text })}\n\n`);
+    }
 
-    res.json({ recipe: text });
+    res.write(`data: ${JSON.stringify({ action: 'close' })}\n\n`);
+    res.end();
   } catch (error) {
-    console.error('Error generating recipe:', error); // 💡 SEE THE REAL ERROR IN Render LOGS
-    res.status(500).json({ error: "Error generating recipe" });
+    console.error('Stream error:', error);
+    res.write(`data: ${JSON.stringify({ action: 'close' })}\n\n`);
+    res.end();
+  }
+});
+
+
+// old /recipe endpoint (optional)
+app.get('/recipe', async (req, res) => {
+  try {
+    const prompt = `
+      Generate a step-by-step ${req.query.mealType} recipe.
+      Cuisine: ${req.query.cuisine}.
+      Cooking time: ${req.query.cookingTime}.
+      Complexity: ${req.query.complexity}.
+      Use these ingredients: ${req.query.ingredients}.
+    `;
+    const result = await model.generateContent(prompt);
+    res.json({ recipe: result.response.text() });
+  } catch (error) {
+    console.error('Error generating recipe:', error);
+    res.status(500).json({ error: 'Failed to generate recipe' });
   }
 });
 
