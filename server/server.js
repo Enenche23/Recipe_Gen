@@ -8,21 +8,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const genAI = new GoogleGenerativeAI(process.env.OPENAI_API_KEY);
+// ✅ Use your real Google Generative AI key in .env (not OPENAI_API_KEY!)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 app.use(cors({
-  origin: '*', // allow all origins (or replace with your frontend URL for security)
+  origin: '*', // Allow all origins; replace with your frontend URL for security
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
 
-// Simple health check
+// Health check
 app.get('/', (req, res) => {
   res.send('✅ Recipe backend is running!');
 });
 
-// 🧩 New streaming route
+// ✅ Correct streaming endpoint
 app.get('/recipeStream', async (req, res) => {
   res.set({
     'Content-Type': 'text/event-stream',
@@ -44,7 +45,9 @@ app.get('/recipeStream', async (req, res) => {
 
     for await (const chunk of result.stream) {
       const text = chunk.text();
-      res.write(`data: ${JSON.stringify({ action: 'chunk', chunk: text })}\n\n`);
+      if (text) {
+        res.write(`data: ${JSON.stringify({ action: 'chunk', chunk: text })}\n\n`);
+      }
     }
 
     res.write(`data: ${JSON.stringify({ action: 'close' })}\n\n`);
@@ -56,8 +59,7 @@ app.get('/recipeStream', async (req, res) => {
   }
 });
 
-
-// old /recipe endpoint (optional)
+// Optional fallback single request endpoint
 app.get('/recipe', async (req, res) => {
   try {
     const prompt = `
@@ -67,7 +69,7 @@ app.get('/recipe', async (req, res) => {
       Complexity: ${req.query.complexity}.
       Use these ingredients: ${req.query.ingredients}.
     `;
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent([prompt]);
     res.json({ recipe: result.response.text() });
   } catch (error) {
     console.error('Error generating recipe:', error);
