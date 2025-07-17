@@ -1,5 +1,6 @@
 import './App.css';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import html2pdf from 'html2pdf.js';
 
 const RecipeCard = ({ onSubmit }) => {
   const [ingredients, setIngredients] = useState('');
@@ -9,42 +10,42 @@ const RecipeCard = ({ onSubmit }) => {
   const [complexity, setComplexity] = useState('');
 
   const handleSubmit = () => {
-    const data = {
+    const recipeData = {
       ingredients: ingredients.trim(),
       mealType,
       cuisine,
       cookingTime,
       complexity,
     };
-    console.log('Submitting:', data);
-    onSubmit(data);
+    console.log('Submitting:', recipeData);
+    onSubmit(recipeData);
   };
 
   return (
-    <div className='recipe-card'>
-      <h2 className='recipe-title'>🍽️ Recipe Generator</h2>
+    <div className="recipe-card">
+      <h2 className="recipe-title">🍽️ Recipe Generator</h2>
       <label>Ingredients</label>
-      <input className='input-field' value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder='e.g. rice, chicken, oil' />
+      <input type="text" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="e.g. rice, chicken" className="input-field" />
 
       <label>Meal Type</label>
-      <input className='input-field' value={mealType} onChange={(e) => setMealType(e.target.value)} placeholder='e.g. lunch' />
+      <input type="text" value={mealType} onChange={(e) => setMealType(e.target.value)} placeholder="e.g. lunch" className="input-field" />
 
-      <label>Cuisine Preference</label>
-      <input className='input-field' value={cuisine} onChange={(e) => setCuisine(e.target.value)} placeholder='e.g. Nigerian' />
+      <label>Cuisine</label>
+      <input type="text" value={cuisine} onChange={(e) => setCuisine(e.target.value)} placeholder="e.g. Nigerian" className="input-field" />
 
       <label>Cooking Time</label>
-      <input className='input-field' value={cookingTime} onChange={(e) => setCookingTime(e.target.value)} placeholder='e.g. 1 hour' />
+      <input type="text" value={cookingTime} onChange={(e) => setCookingTime(e.target.value)} placeholder="e.g. 30 minutes" className="input-field" />
 
       <label>Complexity</label>
-      <select className='input-field' value={complexity} onChange={(e) => setComplexity(e.target.value)}>
-        <option value=''>Select Complexity</option>
-        <option>Beginner</option>
-        <option>Intermediate</option>
-        <option>Advanced</option>
+      <select value={complexity} onChange={(e) => setComplexity(e.target.value)} className="input-field">
+        <option value="">Select Complexity</option>
+        <option value="Beginner">Beginner</option>
+        <option value="Intermediate">Intermediate</option>
+        <option value="Advanced">Advanced</option>
       </select>
 
-      <div className="recipe-actions">
-        <button className='generate-btn' onClick={handleSubmit}>Generate Recipe</button>
+      <div className="generate-container">
+        <button onClick={handleSubmit} className="generate-btn">Generate Recipe</button>
       </div>
     </div>
   );
@@ -52,105 +53,81 @@ const RecipeCard = ({ onSubmit }) => {
 
 function App() {
   const [recipeData, setRecipeData] = useState(null);
-  const [chunks, setChunks] = useState([]);
+  const [recipeText, setRecipeText] = useState('');
   const eventSourceRef = useRef(null);
+  const recipeRef = useRef(null);
 
-  const closeStream = () => {
+  const closeEventStream = () => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
   };
 
-  const initializeStream = useCallback(() => {
+  const initializeEventStream = useCallback(() => {
     if (!recipeData) return;
-    const query = new URLSearchParams(recipeData).toString();
-    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${query}`;
+    const queryParams = new URLSearchParams(recipeData).toString();
+    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
     console.log('Connecting to:', url);
 
     eventSourceRef.current = new EventSource(url);
 
-    let firstChunk = true;
-
-    eventSourceRef.current.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.action === 'chunk') {
-        let text = data.chunk.trim();
-
-        // If first chunk starts with ## Title, treat as title
-        if (firstChunk && text.startsWith('##')) {
-          text = text.replace(/^##\s*/, '');
-          setChunks((prev) => [...prev, { type: 'title', text }]);
-        } else {
-          // Make words after "**" bold
-          const processed = text.replace(/\*\*(.+?)\*\*/g, '<span class="bold-text">$1</span>');
-          setChunks((prev) => [...prev, { type: 'chunk', text: processed }]);
-        }
-        firstChunk = false;
-      }
+    eventSourceRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
       if (data.action === 'close') {
-        closeStream();
+        closeEventStream();
+      } else if (data.action === 'chunk') {
+        setRecipeText((prev) => prev + data.chunk);
       }
     };
 
-    eventSourceRef.current.onerror = (e) => {
-      console.error('EventSource error:', e);
-      closeStream();
+    eventSourceRef.current.onerror = (err) => {
+      console.error('EventSource error:', err);
+      closeEventStream();
     };
   }, [recipeData]);
 
   useEffect(() => {
     if (recipeData) {
-      setChunks([]);
-      closeStream();
-      initializeStream();
+      setRecipeText('');
+      closeEventStream();
+      initializeEventStream();
     }
-  }, [recipeData, initializeStream]);
+  }, [recipeData, initializeEventStream]);
 
-  const onSubmit = (data) => {
-    setRecipeData(data);
+  const handleClear = () => setRecipeText('');
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(recipeText);
+    alert('Recipe copied to clipboard!');
   };
 
-  const saveAsPDF = () => {
-    const printContent = document.querySelector('.recipe-output').innerHTML;
-    const printWindow = window.open('', '', 'width=800,height=600');
-    printWindow.document.write(`<html><head><title>Recipe</title></head><body>${printContent}</body></html>`);
-    printWindow.document.close();
-    printWindow.print();
+  const handleSaveAsPDF = () => {
+    if (recipeRef.current) {
+      html2pdf().from(recipeRef.current).save('recipe.pdf');
+    }
   };
 
-  const copyToClipboard = () => {
-    const text = chunks.map(chunk => chunk.text.replace(/<[^>]+>/g, '')).join('\n');
-    navigator.clipboard.writeText(text);
-  };
-
-  const clearRecipe = () => {
-    setChunks([]);
-  };
+  const onSubmit = (data) => setRecipeData(data);
 
   return (
-    <div className='app-container'>
+    <div className="app-container">
       <RecipeCard onSubmit={onSubmit} />
-      <div className='recipe-output'>
-        {chunks.length === 0 ? (
-          <span className='placeholder-text'>Your recipe will appear here...</span>
-        ) : (
-          <>
-            {chunks.map((chunk, idx) => (
-              chunk.type === 'title' ? (
-                <h3 key={idx}>{chunk.text}</h3>
-              ) : (
-                <p key={idx} dangerouslySetInnerHTML={{ __html: chunk.text }} />
-              )
-            ))}
-          </>
-        )}
+      <div className="recipe-output" ref={recipeRef}>
+        {recipeText
+          ? recipeText.split(/(\*\*.+?\*\*)/g).map((part, i) =>
+              part.startsWith('**') && part.endsWith('**')
+                ? <span key={i} className="bold-text">{part.slice(2, -2)}</span>
+                : <span key={i}>{part}</span>
+            )
+          : <span className="placeholder-text">Your recipe will appear here...</span>}
       </div>
-      {chunks.length > 0 && (
-        <div className='action-buttons'>
-          <button className='action-btn pdf-btn' onClick={saveAsPDF}>Save as PDF</button>
-          <button className='action-btn' onClick={copyToClipboard}>Copy</button>
-          <button className='action-btn' onClick={clearRecipe}>Clear</button>
+
+      {recipeText && (
+        <div className="recipe-actions">
+          <button className="action-btn" onClick={handleClear}>Clear</button>
+          <button className="action-btn" onClick={handleCopy}>Copy</button>
+          <button className="action-btn" onClick={handleSaveAsPDF}>Save as PDF</button>
         </div>
       )}
     </div>
