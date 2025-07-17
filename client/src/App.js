@@ -1,5 +1,3 @@
-/** App.js **/
-
 import './App.css';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
@@ -11,195 +9,150 @@ const RecipeCard = ({ onSubmit }) => {
   const [complexity, setComplexity] = useState('');
 
   const handleSubmit = () => {
-    const recipeData = {
+    const data = {
       ingredients: ingredients.trim(),
       mealType,
       cuisine,
       cookingTime,
       complexity,
     };
-    console.log('Submitting:', recipeData);
-    onSubmit(recipeData);
+    console.log('Submitting:', data);
+    onSubmit(data);
   };
 
   return (
     <div className='recipe-card'>
       <h2 className='recipe-title'>🍽️ Recipe Generator</h2>
-      <label htmlFor='ingredients'>Ingredients</label>
-      <input
-        type='text'
-        id='ingredients'
-        value={ingredients}
-        onChange={(e) => setIngredients(e.target.value)}
-        className='input-field'
-        placeholder='e.g. rice, chicken, oil'
-      />
+      <label>Ingredients</label>
+      <input className='input-field' value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder='e.g. rice, chicken, oil' />
 
-      <label htmlFor='mealType'>Meal Type</label>
-      <input
-        type='text'
-        id='mealType'
-        value={mealType}
-        onChange={(e) => setMealType(e.target.value)}
-        className='input-field'
-        placeholder='e.g. breakfast, lunch, dinner'
-      />
+      <label>Meal Type</label>
+      <input className='input-field' value={mealType} onChange={(e) => setMealType(e.target.value)} placeholder='e.g. lunch' />
 
-      <label htmlFor='cuisine'>Cuisine Preference</label>
-      <input
-        type='text'
-        id='cuisine'
-        value={cuisine}
-        onChange={(e) => setCuisine(e.target.value)}
-        className='input-field'
-        placeholder='e.g. Italian, Nigerian'
-      />
+      <label>Cuisine Preference</label>
+      <input className='input-field' value={cuisine} onChange={(e) => setCuisine(e.target.value)} placeholder='e.g. Nigerian' />
 
-      <label htmlFor='cookingTime'>Cooking Time</label>
-      <input
-        type='text'
-        id='cookingTime'
-        value={cookingTime}
-        onChange={(e) => setCookingTime(e.target.value)}
-        className='input-field'
-        placeholder='e.g. 30 minutes'
-      />
+      <label>Cooking Time</label>
+      <input className='input-field' value={cookingTime} onChange={(e) => setCookingTime(e.target.value)} placeholder='e.g. 1 hour' />
 
-      <label htmlFor='complexity'>Complexity</label>
-      <select
-        id='complexity'
-        value={complexity}
-        onChange={(e) => setComplexity(e.target.value)}
-        className='input-field'
-      >
+      <label>Complexity</label>
+      <select className='input-field' value={complexity} onChange={(e) => setComplexity(e.target.value)}>
         <option value=''>Select Complexity</option>
-        <option value='Beginner'>Beginner</option>
-        <option value='Intermediate'>Intermediate</option>
-        <option value='Advanced'>Advanced</option>
+        <option>Beginner</option>
+        <option>Intermediate</option>
+        <option>Advanced</option>
       </select>
 
-      <button onClick={handleSubmit} className='generate-btn'>
-        Generate Recipe
-      </button>
+      <div className="recipe-actions">
+        <button className='generate-btn' onClick={handleSubmit}>Generate Recipe</button>
+      </div>
     </div>
   );
 };
 
 function App() {
   const [recipeData, setRecipeData] = useState(null);
-  const [recipeText, setRecipeText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [chunks, setChunks] = useState([]);
   const eventSourceRef = useRef(null);
 
-  const closeEventStream = () => {
+  const closeStream = () => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
   };
 
-  const initializeEventStream = useCallback(() => {
+  const initializeStream = useCallback(() => {
     if (!recipeData) return;
-
-    const queryParams = new URLSearchParams(recipeData).toString();
-    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
-
+    const query = new URLSearchParams(recipeData).toString();
+    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${query}`;
     console.log('Connecting to:', url);
-    setIsLoading(true);
 
     eventSourceRef.current = new EventSource(url);
 
-    eventSourceRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+    let firstChunk = true;
+
+    eventSourceRef.current.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.action === 'chunk') {
+        let text = data.chunk.trim();
+
+        // If first chunk starts with ## Title, treat as title
+        if (firstChunk && text.startsWith('##')) {
+          text = text.replace(/^##\s*/, '');
+          setChunks((prev) => [...prev, { type: 'title', text }]);
+        } else {
+          // Make words after "**" bold
+          const processed = text.replace(/\*\*(.+?)\*\*/g, '<span class="bold-text">$1</span>');
+          setChunks((prev) => [...prev, { type: 'chunk', text: processed }]);
+        }
+        firstChunk = false;
+      }
       if (data.action === 'close') {
-        closeEventStream();
-        setIsLoading(false);
-      } else if (data.action === 'chunk') {
-        setRecipeText((prev) => prev + data.chunk);
+        closeStream();
       }
     };
 
-    eventSourceRef.current.onerror = (err) => {
-      console.error('EventSource error:', err);
-      closeEventStream();
-      setIsLoading(false);
+    eventSourceRef.current.onerror = (e) => {
+      console.error('EventSource error:', e);
+      closeStream();
     };
   }, [recipeData]);
 
   useEffect(() => {
     if (recipeData) {
-      setRecipeText('');
-      closeEventStream();
-      initializeEventStream();
+      setChunks([]);
+      closeStream();
+      initializeStream();
     }
-  }, [recipeData, initializeEventStream]);
+  }, [recipeData, initializeStream]);
 
   const onSubmit = (data) => {
-    setRecipeData({
-      ...data,
-      ingredients: data.ingredients.trim()
-    });
+    setRecipeData(data);
   };
 
-  const downloadPDF = (text) => {
-    const element = document.createElement('a');
-    const file = new Blob([text], { type: 'application/pdf' });
-    element.href = URL.createObjectURL(file);
-    element.download = 'recipe.pdf';
-    document.body.appendChild(element);
-    element.click();
+  const saveAsPDF = () => {
+    const printContent = document.querySelector('.recipe-output').innerHTML;
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(`<html><head><title>Recipe</title></head><body>${printContent}</body></html>`);
+    printWindow.document.close();
+    printWindow.print();
   };
 
-  const formatRecipeText = (text) => {
-    if (!text) return null;
-    return text.split('\n').map((line, idx) => {
-      const parts = line.split(/(\*\*.*?\*\*)/g).map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          const clean = part.slice(2, -2);
-          return <strong key={i} className="bold-text">{clean}</strong>;
-        }
-        return part;
-      });
-      return <div key={idx}>{parts}</div>;
-    });
+  const copyToClipboard = () => {
+    const text = chunks.map(chunk => chunk.text.replace(/<[^>]+>/g, '')).join('\n');
+    navigator.clipboard.writeText(text);
+  };
+
+  const clearRecipe = () => {
+    setChunks([]);
   };
 
   return (
     <div className='app-container'>
       <RecipeCard onSubmit={onSubmit} />
-
-      <div className='recipe-actions'>
-        <button onClick={() => setRecipeText('')} className='action-btn' disabled={!recipeText}>
-          🧹 Clear
-        </button>
-        <button
-          onClick={() => {
-            navigator.clipboard.writeText(recipeText || '');
-            alert('✅ Recipe copied to clipboard!');
-          }}
-          className='action-btn'
-          disabled={!recipeText}
-        >
-          📋 Copy
-        </button>
-        <button
-          onClick={() => downloadPDF(recipeText)}
-          className='action-btn'
-          disabled={!recipeText}
-        >
-          📄 Save as PDF
-        </button>
-      </div>
-
       <div className='recipe-output'>
-        {isLoading ? (
-          <span className='placeholder-text'>🍳 Generating your recipe...</span>
-        ) : recipeText ? (
-          formatRecipeText(recipeText)
-        ) : (
+        {chunks.length === 0 ? (
           <span className='placeholder-text'>Your recipe will appear here...</span>
+        ) : (
+          <>
+            {chunks.map((chunk, idx) => (
+              chunk.type === 'title' ? (
+                <h3 key={idx}>{chunk.text}</h3>
+              ) : (
+                <p key={idx} dangerouslySetInnerHTML={{ __html: chunk.text }} />
+              )
+            ))}
+          </>
         )}
       </div>
+      {chunks.length > 0 && (
+        <div className='action-buttons'>
+          <button className='action-btn pdf-btn' onClick={saveAsPDF}>Save as PDF</button>
+          <button className='action-btn' onClick={copyToClipboard}>Copy</button>
+          <button className='action-btn' onClick={clearRecipe}>Clear</button>
+        </div>
+      )}
     </div>
   );
 }

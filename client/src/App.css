@@ -1,86 +1,110 @@
-/* App.css */
+/* Layout */
 .app-container {
+  max-width: 600px;
+  margin: auto;
+  padding: 16px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f8f9fa;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
 }
 
 .recipe-card {
   background: #fff;
-  padding: 24px;
+  padding: 16px;
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 500px;
-  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
+/* Inputs */
+.input-field {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+/* Title */
 .recipe-title {
   text-align: center;
-  margin-bottom: 16px;
-  font-size: 1.6em;
+  font-size: 1.6rem;
+  margin-bottom: 12px;
   color: #2c3e50;
 }
 
-.input-field {
-  width: 100%;
-  padding: 8px 10px;
-  margin-bottom: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+/* Generate Recipe Button */
+.recipe-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
 }
 
-.recipe-actions {
+.generate-btn {
+  background-color: #3498db;
+  color: white;
+  font-weight: bold;
+  padding: 12px 24px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.generate-btn:hover {
+  background-color: #2980b9;
+  transform: translateY(-2px);
+}
+
+/* Recipe Output */
+.recipe-output {
+  margin-top: 20px;
+  background: #fafafa;
+  padding: 16px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+
+/* Bold text inside recipe */
+.bold-text {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+/* Action buttons (Save, Copy, Clear) */
+.action-buttons {
   display: flex;
   justify-content: space-between;
   margin-top: 12px;
+  gap: 8px;
 }
 
 .action-btn {
   flex: 1;
-  margin: 0 4px;
-  background-color: #3bc9a7;
-  color: white;
+  background-color: #f0f0f0;
   border: none;
-  padding: 10px 14px;
+  padding: 10px;
+  font-size: 0.95rem;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .action-btn:hover {
-  background-color: #31ab90;
+  background-color: #ddd;
 }
 
-.action-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+/* Make "Save as PDF" button larger */
+.action-btn.pdf-btn {
+  padding: 12px;
+  font-size: 1rem;
 }
 
-.recipe-output {
-  width: 100%;
-  max-width: 600px;
-  background: white;
-  border-radius: 10px;
-  padding: 20px;
-  white-space: pre-wrap;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.placeholder-text {
-  color: #888;
-}
-
-.bold-text {
-  font-weight: bold;
-  font-size: 1.1em;
-  color: #2c3e50;
-}
-
-.recipe-line {
-  margin-bottom: 6px;
+/* Responsive */
+@media (max-width: 600px) {
+  .generate-btn, .action-btn {
+    font-size: 0.9rem;
+    padding: 10px;
+  }
 }
