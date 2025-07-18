@@ -1,128 +1,156 @@
-import React, { useState, useRef } from "react";
-import { marked } from "marked";
-import "./App.css";
+import './App.css';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
-export default function App() {
-  const [recipe, setRecipe] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [mealType, setMealType] = useState("");
-  const [cuisine, setCuisine] = useState("");
-  const [cookingTime, setCookingTime] = useState("");
-  const [complexity, setComplexity] = useState("");
-  const recipeRef = useRef(null);
+const RecipeCard = ({ onSubmit }) => {
+  const [ingredients, setIngredients] = useState('');
+  const [mealType, setMealType] = useState('');
+  const [cuisine, setCuisine] = useState('');
+  const [cookingTime, setCookingTime] = useState('');
+  const [complexity, setComplexity] = useState('');
 
-  const onSubmit = async () => {
-    setRecipe(""); // clear previous
-    const params = {
-      ingredients,
+  const handleSubmit = () => {
+    const recipeData = {
+      ingredients: ingredients.trim(),
       mealType,
       cuisine,
       cookingTime,
       complexity,
     };
-    console.log("Submitting:", params);
-
-    const query = new URLSearchParams(params).toString();
-    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${query}`;
-    console.log("Connecting to:", url);
-
-    const eventSource = new EventSource(url);
-    eventSource.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.action === "chunk") {
-        setRecipe((prev) => prev + data.chunk);
-      } else if (data.action === "close") {
-        eventSource.close();
-      }
-    };
-    eventSource.onerror = (e) => {
-      console.error("EventSource error:", e);
-      eventSource.close();
-    };
+    console.log('Submitting:', recipeData);
+    onSubmit(recipeData);
   };
 
-  const copyToClipboard = () => {
-    if (recipeRef.current) {
-      navigator.clipboard.writeText(recipe);
+  return (
+    <div className="recipe-card">
+      <h2 className="recipe-title">🍽️ AI Recipe Generator</h2>
+      <label htmlFor='ingredients'>Ingredients</label>
+      <input
+        type='text'
+        id='ingredients'
+        value={ingredients}
+        onChange={(e) => setIngredients(e.target.value)}
+        className='input-field'
+        placeholder='e.g. rice, chicken, oil'
+      />
+
+      <label htmlFor='mealType'>Meal Type</label>
+      <input
+        type='text'
+        id='mealType'
+        value={mealType}
+        onChange={(e) => setMealType(e.target.value)}
+        className='input-field'
+        placeholder='e.g. breakfast, lunch, dinner'
+      />
+
+      <label htmlFor='cuisine'>Cuisine Preference</label>
+      <input
+        type='text'
+        id='cuisine'
+        value={cuisine}
+        onChange={(e) => setCuisine(e.target.value)}
+        className='input-field'
+        placeholder='e.g. Italian, Nigerian'
+      />
+
+      <label htmlFor='cookingTime'>Cooking Time</label>
+      <input
+        type='text'
+        id='cookingTime'
+        value={cookingTime}
+        onChange={(e) => setCookingTime(e.target.value)}
+        className='input-field'
+        placeholder='e.g. 30 minutes'
+      />
+
+      <label htmlFor='complexity'>Complexity</label>
+      <select
+        id='complexity'
+        value={complexity}
+        onChange={(e) => setComplexity(e.target.value)}
+        className='input-field'
+      >
+        <option value=''>Select Complexity</option>
+        <option value='Beginner'>Beginner</option>
+        <option value='Intermediate'>Intermediate</option>
+        <option value='Advanced'>Advanced</option>
+      </select>
+
+      <button onClick={handleSubmit} className='generate-btn'>
+        Generate Recipe
+      </button>
+    </div>
+  );
+};
+
+function App() {
+  const [recipeData, setRecipeData] = useState(null);
+  const [recipeText, setRecipeText] = useState('');
+  const eventSourceRef = useRef(null);
+
+  const closeEventStream = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
   };
 
-  const saveAsPDF = () => {
-    const element = document.createElement("a");
-    const file = new Blob([recipe], { type: "application/pdf" });
-    element.href = URL.createObjectURL(file);
-    element.download = "recipe.pdf";
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+  const initializeEventStream = useCallback(() => {
+    if (!recipeData) return;
+    const queryParams = new URLSearchParams(recipeData).toString();
+    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
+
+    console.log('Connecting to:', url);
+
+    eventSourceRef.current = new EventSource(url);
+
+    eventSourceRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.action === 'close') {
+        closeEventStream();
+      } else if (data.action === 'chunk') {
+        // Remove leading ## or keep them styled
+        let cleanChunk = data.chunk.replace(/^##\s*/, '');
+        setRecipeText((prev) => prev + cleanChunk);
+      }
+    };
+
+    eventSourceRef.current.onerror = (err) => {
+      console.error('EventSource error:', err);
+      closeEventStream();
+    };
+  }, [recipeData]);
+
+  useEffect(() => {
+    if (recipeData) {
+      setRecipeText('');
+      closeEventStream();
+      initializeEventStream();
+    }
+  }, [recipeData, initializeEventStream]);
+
+  const onSubmit = (data) => {
+    setRecipeData(data);
   };
 
-  const clearRecipe = () => setRecipe("");
-
   return (
-    <div className="app-container">
-      <h1 className="recipe-title">AI Nigerian Recipe Generator</h1>
-      <div className="recipe-card">
-        <input
-          className="input-field"
-          type="text"
-          placeholder="Ingredients (comma separated)"
-          value={ingredients}
-          onChange={(e) => setIngredients(e.target.value)}
-        />
-        <input
-          className="input-field"
-          type="text"
-          placeholder="Meal Type (breakfast, lunch, etc)"
-          value={mealType}
-          onChange={(e) => setMealType(e.target.value)}
-        />
-        <input
-          className="input-field"
-          type="text"
-          placeholder="Cuisine (Nigerian, etc)"
-          value={cuisine}
-          onChange={(e) => setCuisine(e.target.value)}
-        />
-        <input
-          className="input-field"
-          type="text"
-          placeholder="Cooking Time (e.g., 1 hour)"
-          value={cookingTime}
-          onChange={(e) => setCookingTime(e.target.value)}
-        />
-        <input
-          className="input-field"
-          type="text"
-          placeholder="Complexity (Easy, Intermediate, etc)"
-          value={complexity}
-          onChange={(e) => setComplexity(e.target.value)}
-        />
-        <button className="generate-btn" onClick={onSubmit}>
-          Generate Recipe
-        </button>
+    <div className='app-container'>
+      <RecipeCard onSubmit={onSubmit} />
+      <div className='recipe-output'>
+        {recipeText
+          ? recipeText
+              .split(/(\*\*.*?\*\*)/)
+              .map((part, i) =>
+                part.startsWith('**') && part.endsWith('**') ? (
+                  <span key={i} className='bold-text'>{part.slice(2, -2)}</span>
+                ) : (
+                  <span key={i}>{part}</span>
+                )
+              )
+          : <span className='placeholder-text'>Your recipe will appear here...</span>}
       </div>
-
-      {recipe && (
-        <>
-          <div
-            className="recipe-output"
-            ref={recipeRef}
-            dangerouslySetInnerHTML={{ __html: marked.parse(recipe) }}
-          ></div>
-          <div className="recipe-actions">
-            <button className="action-btn" onClick={clearRecipe}>
-              Clear
-            </button>
-            <button className="action-btn" onClick={copyToClipboard}>
-              Copy
-            </button>
-            <button className="action-btn" onClick={saveAsPDF}>
-              Save as PDF
-            </button>
-          </div>
-        </>
-      )}
     </div>
   );
 }
+
+export default App;
