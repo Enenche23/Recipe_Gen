@@ -1,5 +1,6 @@
 import './App.css';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { marked } from 'marked';
 
 const RecipeCard = ({ onSubmit }) => {
   const [ingredients, setIngredients] = useState('');
@@ -9,56 +10,67 @@ const RecipeCard = ({ onSubmit }) => {
   const [complexity, setComplexity] = useState('');
 
   const handleSubmit = () => {
-    const data = { ingredients, mealType, cuisine, cookingTime, complexity };
-    console.log('Submitting:', data);
-    onSubmit(data);
+    const recipeData = {
+      ingredients: ingredients.trim(),
+      mealType,
+      cuisine,
+      cookingTime,
+      complexity,
+    };
+    console.log('Submitting:', recipeData);
+    onSubmit(recipeData);
   };
 
   return (
     <div className='recipe-card'>
       <h2 className='recipe-title'>🍽️ Recipe Generator</h2>
 
-      <label>Ingredients</label>
+      <label htmlFor='ingredients'>Ingredients</label>
       <input
-        className='input-field'
         type='text'
-        placeholder='e.g. rice, beans, oil'
+        id='ingredients'
         value={ingredients}
         onChange={(e) => setIngredients(e.target.value)}
+        className='input-field'
+        placeholder='e.g. rice, chicken, oil'
       />
 
-      <label>Meal Type</label>
+      <label htmlFor='mealType'>Meal Type</label>
       <input
-        className='input-field'
         type='text'
-        placeholder='e.g. lunch, dinner'
+        id='mealType'
         value={mealType}
         onChange={(e) => setMealType(e.target.value)}
+        className='input-field'
+        placeholder='e.g. breakfast, lunch, dinner'
       />
 
-      <label>Cuisine Preference</label>
+      <label htmlFor='cuisine'>Cuisine Preference</label>
       <input
-        className='input-field'
         type='text'
-        placeholder='e.g. Nigerian, Italian'
+        id='cuisine'
         value={cuisine}
         onChange={(e) => setCuisine(e.target.value)}
+        className='input-field'
+        placeholder='e.g. Italian, Nigerian'
       />
 
-      <label>Cooking Time</label>
+      <label htmlFor='cookingTime'>Cooking Time</label>
       <input
-        className='input-field'
         type='text'
-        placeholder='e.g. 30 minutes'
+        id='cookingTime'
         value={cookingTime}
         onChange={(e) => setCookingTime(e.target.value)}
+        className='input-field'
+        placeholder='e.g. 30 minutes'
       />
 
-      <label>Complexity</label>
+      <label htmlFor='complexity'>Complexity</label>
       <select
-        className='input-field'
+        id='complexity'
         value={complexity}
         onChange={(e) => setComplexity(e.target.value)}
+        className='input-field'
       >
         <option value=''>Select Complexity</option>
         <option value='Beginner'>Beginner</option>
@@ -66,7 +78,7 @@ const RecipeCard = ({ onSubmit }) => {
         <option value='Advanced'>Advanced</option>
       </select>
 
-      <button className='generate-btn' onClick={handleSubmit}>
+      <button onClick={handleSubmit} className='generate-btn'>
         Generate Recipe
       </button>
     </div>
@@ -87,22 +99,21 @@ function App() {
 
   const initializeEventStream = useCallback(() => {
     if (!recipeData) return;
-
     const queryParams = new URLSearchParams(recipeData).toString();
     const url = `https://recipe-backend-47av.onrender.com/recipeStream?${queryParams}`;
+
     console.log('Connecting to:', url);
 
     eventSourceRef.current = new EventSource(url);
 
     eventSourceRef.current.onmessage = (event) => {
+      console.log('Received:', event.data);
       const data = JSON.parse(event.data);
 
       if (data.action === 'close') {
         closeEventStream();
       } else if (data.action === 'chunk') {
-        // Apply bold effect: detect words wrapped with **...** and replace with <strong>
-        const htmlChunk = data.chunk.replace(/\*\*(.*?)\*\*/g, '<span class="bold-text">$1</span>');
-        setRecipeText((prev) => prev + htmlChunk);
+        setRecipeText((prev) => prev + data.chunk);
       }
     };
 
@@ -120,35 +131,21 @@ function App() {
     }
   }, [recipeData, initializeEventStream]);
 
-  const onSubmit = (data) => setRecipeData(data);
-
-  const clearRecipe = () => setRecipeText('');
-
-  const copyRecipe = () => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = recipeText;
-    const textContent = tempDiv.innerText;
-    navigator.clipboard.writeText(textContent);
-  };
-
-  const saveAsPDF = () => {
-    const printWindow = window.open('', '', 'width=800,height=600');
-    printWindow.document.write(`<html><head><title>Recipe</title></head><body>${recipeText}</body></html>`);
-    printWindow.document.close();
-    printWindow.print();
+  const onSubmit = (data) => {
+    const formattedData = {
+      ...data,
+      ingredients: data.ingredients.trim()
+    };
+    setRecipeData(formattedData);
   };
 
   return (
     <div className='app-container'>
       <RecipeCard onSubmit={onSubmit} />
-      <div className='recipe-output'>
-        <div dangerouslySetInnerHTML={{ __html: recipeText || "<span class='placeholder-text'>Your recipe will appear here...</span>" }} />
-        <div className='recipe-actions'>
-          <button className='action-btn' onClick={clearRecipe}>Clear</button>
-          <button className='action-btn' onClick={copyRecipe}>Copy</button>
-          <button className='action-btn' onClick={saveAsPDF}>Save as PDF</button>
-        </div>
-      </div>
+      <div
+        className='recipe-output'
+        dangerouslySetInnerHTML={{ __html: marked(recipeText) }}
+      />
     </div>
   );
 }
