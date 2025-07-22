@@ -12,7 +12,6 @@ function App() {
   const [title, setTitle] = useState("");  // new title state
 
   const [isLoading, setIsLoading] = useState(false);
-  //const recipeRef = useRef(null);
 
   const handleGenerate = async () => {
     setRecipe("");
