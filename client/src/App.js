@@ -1,137 +1,135 @@
-import React, { useState } from "react";
-import { marked } from "marked";
-import "./App.css";
+import React, { useState } from 'react';
+import './App.css';
+import { marked } from 'marked';
 
 function App() {
-  const [ingredients, setIngredients] = useState("");
-  const [mealType, setMealType] = useState("");
-  const [cuisine, setCuisine] = useState("");
-  const [cookingTime, setCookingTime] = useState("");
-  const [complexity, setComplexity] = useState("");
-  const [recipe, setRecipe] = useState("");
-  const [title, setTitle] = useState("");  // new title state
+  const [ingredients, setIngredients] = useState('');
+  const [mealType, setMealType] = useState('');
+  const [cuisine, setCuisine] = useState('');
+  const [cookingTime, setCookingTime] = useState('');
+  const [complexity, setComplexity] = useState('');
+  const [recipe, setRecipe] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [isLoading, setIsLoading] = useState(false);
-  //const recipeRef = useRef(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setRecipe('');
+    setLoading(true);
 
-  const handleGenerate = async () => {
-    setRecipe("");
-    setTitle("");
-    setIsLoading(true);
-    const url = `https://recipe-backend-47av.onrender.com/recipeStream?ingredients=${encodeURIComponent(
-      ingredients
-    )}&mealType=${encodeURIComponent(mealType)}&cuisine=${encodeURIComponent(
-      cuisine
-    )}&cookingTime=${encodeURIComponent(
-      cookingTime
-    )}&complexity=${encodeURIComponent(complexity)}`;
+    try {
+      const query = new URLSearchParams({
+        ingredients,
+        mealType,
+        cuisine,
+        cookingTime,
+        complexity
+      }).toString();
 
-    console.log("Connecting to:", url);
+      const url = `https://recipe-backend-47av.onrender.com/recipeStream?${query}`;
+      console.log('Connecting to:', url);
 
-    const eventSource = new EventSource(url);
-    let firstChunk = true;
+      const eventSource = new EventSource(url);
+      let accumulated = '';
 
-    eventSource.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.action === "chunk") {
-        if (firstChunk) {
-          // Try to extract first heading as title
-          const match = data.chunk.match(/##\s*(.*)/);
-          if (match) {
-            setTitle(match[1].trim());
-          }
-          firstChunk = false;
-        } else {
-          setRecipe((prev) => prev + data.chunk + "\n");
+      eventSource.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.action === 'chunk') {
+          accumulated += data.chunk;
+          setRecipe(accumulated);
+        } else if (data.action === 'close') {
+          eventSource.close();
+          setLoading(false);
         }
-      } else if (data.action === "close") {
-        setIsLoading(false);
-        eventSource.close();
-      }
-    };
+      };
 
-    eventSource.onerror = (err) => {
-      console.error("EventSource error:", err);
-      eventSource.close();
-      setIsLoading(false);
-    };
+      eventSource.onerror = (err) => {
+        console.error('EventSource failed:', err);
+        eventSource.close();
+        setLoading(false);
+      };
+    } catch (error) {
+      console.error('Error:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleClear = () => setRecipe('');
+  const handleCopy = () => navigator.clipboard.writeText(recipe);
+  const handleSave = () => {
+    const blob = new Blob([recipe], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'recipe.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Format the markdown to show title bold without ##
+  const formatRecipe = (text) => {
+    if (!text) return '';
+    const lines = text.split('\n');
+    if (lines[0].startsWith('##')) {
+      lines[0] = `# ${lines[0].replace(/^##\s*/, '')}`;
+    }
+    return marked.parse(lines.join('\n'));
   };
 
   return (
     <div className="app-container">
-      <h1 className="recipe-title">AI Recipe Generator</h1>
-
-      <div className="recipe-card">
+      <h1 className="app-title">AI Recipe Generator</h1>
+      <form className="recipe-form" onSubmit={handleSubmit}>
         <input
-          className="input-field"
+          type="text"
+          placeholder="Ingredients (e.g., rice, chicken, spices)"
           value={ingredients}
           onChange={(e) => setIngredients(e.target.value)}
-          placeholder="Ingredients (e.g., rice, beans, oil)"
+          required
         />
         <input
-          className="input-field"
+          type="text"
+          placeholder="Meal Type (e.g., lunch, dinner)"
           value={mealType}
           onChange={(e) => setMealType(e.target.value)}
-          placeholder="Meal Type (e.g., lunch, dinner)"
+          required
         />
         <input
-          className="input-field"
+          type="text"
+          placeholder="Cuisine (e.g., Nigerian, Italian)"
           value={cuisine}
           onChange={(e) => setCuisine(e.target.value)}
-          placeholder="Cuisine Preference"
+          required
         />
         <input
-          className="input-field"
+          type="text"
+          placeholder="Cooking Time (e.g., 30 minutes)"
           value={cookingTime}
           onChange={(e) => setCookingTime(e.target.value)}
-          placeholder="Cooking Time (e.g., 1 hour)"
+          required
         />
         <input
-          className="input-field"
+          type="text"
+          placeholder="Complexity (e.g., Easy, Intermediate)"
           value={complexity}
           onChange={(e) => setComplexity(e.target.value)}
-          placeholder="Complexity (e.g., easy, pro)"
+          required
         />
-        <button
-          className="generate-btn"
-          onClick={handleGenerate}
-          disabled={isLoading}
-        >
-          {isLoading ? "Generating..." : "Generate Recipe"}
+        <button className="generate-btn" type="submit" disabled={loading}>
+          {loading ? 'Generating...' : 'Generate Recipe'}
         </button>
-      </div>
+      </form>
 
-      {title && <h2 className="generated-title">{title}</h2>}
-
-      <div
-        className="recipe-output recipe-text"
-        dangerouslySetInnerHTML={{ __html: marked.parse(recipe) }}
-      />
-
-      {/* Action buttons */}
-      <div className="recipe-actions">
-        <button
-          className="action-btn"
-          onClick={() => setRecipe("")}
-          disabled={!recipe}
-        >
-          Clear
-        </button>
-        <button
-          className="action-btn"
-          onClick={() => navigator.clipboard.writeText(title + "\n\n" + recipe)}
-          disabled={!recipe}
-        >
-          Copy
-        </button>
-        <button
-          className="action-btn"
-          onClick={() => window.print()}
-          disabled={!recipe}
-        >
-          Save as PDF
-        </button>
-      </div>
+      {recipe && (
+        <div className="recipe-container">
+          <div dangerouslySetInnerHTML={{ __html: formatRecipe(recipe) }}></div>
+          <div className="recipe-actions">
+            <button onClick={handleClear}>Clear</button>
+            <button onClick={handleCopy}>Copy</button>
+            <button onClick={handleSave}>Save as PDF</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
