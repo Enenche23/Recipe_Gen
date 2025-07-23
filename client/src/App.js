@@ -3,142 +3,135 @@ import { marked } from "marked";
 import "./App.css";
 
 function App() {
-  const [formData, setFormData] = useState({
-    ingredients: "",
-    mealType: "",
-    cuisine: "",
-    cookingTime: "",
-    complexity: ""
-  });
-
+  const [ingredients, setIngredients] = useState("");
+  const [mealType, setMealType] = useState("");
+  const [cuisine, setCuisine] = useState("");
+  const [cookingTime, setCookingTime] = useState("");
+  const [complexity, setComplexity] = useState("");
   const [recipe, setRecipe] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [title, setTitle] = useState("");  // new title state
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const [isLoading, setIsLoading] = useState(false);
+  //const recipeRef = useRef(null);
 
   const handleGenerate = async () => {
-    setIsGenerating(true);
-    setRecipe(""); // clear before starting
-
-    try {
-      const params = new URLSearchParams(formData).toString();
-      const response = await fetch(
-        `https://recipe-backend-47av.onrender.com/recipeStream?${params}`
-      );
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        fullText += chunk;
-
-        // remove "## " only at the start of the first chunk if present
-        if (fullText.startsWith("## ")) {
-          fullText = "**" + fullText.slice(3).trimStart() + "**";
-        }
-
-        setRecipe(fullText);
-      }
-    } catch (error) {
-      console.error("Error generating recipe:", error);
-      alert("Failed to generate recipe. Please try again.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleClear = () => {
-    setFormData({
-      ingredients: "",
-      mealType: "",
-      cuisine: "",
-      cookingTime: "",
-      complexity: ""
-    });
     setRecipe("");
-  };
+    setTitle("");
+    setIsLoading(true);
+    const url = `https://recipe-backend-47av.onrender.com/recipeStream?ingredients=${encodeURIComponent(
+      ingredients
+    )}&mealType=${encodeURIComponent(mealType)}&cuisine=${encodeURIComponent(
+      cuisine
+    )}&cookingTime=${encodeURIComponent(
+      cookingTime
+    )}&complexity=${encodeURIComponent(complexity)}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(recipe).then(() =>
-      alert("Recipe copied to clipboard!")
-    );
-  };
+    console.log("Connecting to:", url);
 
-  const handleSavePDF = () => {
-    const element = document.createElement("a");
-    const blob = new Blob([recipe], { type: "application/pdf" });
-    element.href = URL.createObjectURL(blob);
-    element.download = "recipe.pdf";
-    element.click();
+    const eventSource = new EventSource(url);
+    let firstChunk = true;
+
+    eventSource.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.action === "chunk") {
+        if (firstChunk) {
+          // Try to extract first heading as title
+          const match = data.chunk.match(/##\s*(.*)/);
+          if (match) {
+            setTitle(match[1].trim());
+          }
+          firstChunk = false;
+        } else {
+          setRecipe((prev) => prev + data.chunk + "\n");
+        }
+      } else if (data.action === "close") {
+        setIsLoading(false);
+        eventSource.close();
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("EventSource error:", err);
+      eventSource.close();
+      setIsLoading(false);
+    };
   };
 
   return (
     <div className="app-container">
-      <h1>AI Recipe Generator</h1>
+      <h1 className="recipe-title">AI Recipe Generator</h1>
 
-      <div className="form">
+      <div className="recipe-card">
         <input
-          type="text"
-          name="ingredients"
-          placeholder="Ingredients (comma-separated)"
-          value={formData.ingredients}
-          onChange={handleChange}
+          className="input-field"
+          value={ingredients}
+          onChange={(e) => setIngredients(e.target.value)}
+          placeholder="Ingredients (e.g., rice, beans, oil)"
         />
         <input
-          type="text"
-          name="mealType"
+          className="input-field"
+          value={mealType}
+          onChange={(e) => setMealType(e.target.value)}
           placeholder="Meal Type (e.g., lunch, dinner)"
-          value={formData.mealType}
-          onChange={handleChange}
         />
         <input
-          type="text"
-          name="cuisine"
-          placeholder="Cuisine (e.g., Nigerian, Italian)"
-          value={formData.cuisine}
-          onChange={handleChange}
+          className="input-field"
+          value={cuisine}
+          onChange={(e) => setCuisine(e.target.value)}
+          placeholder="Cuisine Preference"
         />
         <input
-          type="text"
-          name="cookingTime"
-          placeholder="Cooking Time (e.g., 30 mins)"
-          value={formData.cookingTime}
-          onChange={handleChange}
+          className="input-field"
+          value={cookingTime}
+          onChange={(e) => setCookingTime(e.target.value)}
+          placeholder="Cooking Time (e.g., 1 hour)"
         />
         <input
-          type="text"
-          name="complexity"
-          placeholder="Complexity (e.g., Easy, Intermediate)"
-          value={formData.complexity}
-          onChange={handleChange}
+          className="input-field"
+          value={complexity}
+          onChange={(e) => setComplexity(e.target.value)}
+          placeholder="Complexity (e.g., easy, pro)"
         />
-
         <button
-          className="generate-button"
+          className="generate-btn"
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isLoading}
         >
-          {isGenerating ? "Generating..." : "Generate Recipe"}
+          {isLoading ? "Generating..." : "Generate Recipe"}
         </button>
       </div>
 
-      <div className="buttons-row">
-        <button onClick={handleClear}>Clear</button>
-        <button onClick={handleCopy}>Copy</button>
-        <button onClick={handleSavePDF}>Save as PDF</button>
-      </div>
+      {title && <h2 className="generated-title">{title}</h2>}
 
       <div
-        className="recipe-output"
+        className="recipe-output recipe-text"
         dangerouslySetInnerHTML={{ __html: marked.parse(recipe) }}
       />
+
+      {/* Action buttons */}
+      <div className="recipe-actions">
+        <button
+          className="action-btn"
+          onClick={() => setRecipe("")}
+          disabled={!recipe}
+        >
+          Clear
+        </button>
+        <button
+          className="action-btn"
+          onClick={() => navigator.clipboard.writeText(title + "\n\n" + recipe)}
+          disabled={!recipe}
+        >
+          Copy
+        </button>
+        <button
+          className="action-btn"
+          onClick={() => window.print()}
+          disabled={!recipe}
+        >
+          Save as PDF
+        </button>
+      </div>
     </div>
   );
 }
