@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import { marked } from 'marked';
+import jsPDF from 'jspdf';
 
 function App() {
   const [ingredients, setIngredients] = useState('');
@@ -64,15 +65,11 @@ function App() {
   };
 
   const handleSave = () => {
-    const blob = new Blob([recipe], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'recipe.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const doc = new jsPDF();
+  doc.setFontSize(12);
+  doc.text(recipe, 10, 10); // basic text
+  doc.save('recipe.pdf');
+};
 
   const formatRecipe = (text) => {
     if (!text) return '';
