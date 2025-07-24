@@ -14,7 +14,7 @@ body {
   text-align: center;
 }
 
-.app-title {
+h1 {
   font-size: 2rem;
   color: #1f2937;
   margin-bottom: 1rem;
@@ -50,6 +50,13 @@ body {
 .generate-btn:disabled {
   background-color: #94a3b8;
   cursor: not-allowed;
+}
+
+.recipe-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1.2rem 0;
+  color: #111827;
 }
 
 .recipe-text {

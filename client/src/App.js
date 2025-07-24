@@ -10,6 +10,7 @@ function App() {
   const [complexity, setComplexity] = useState('');
   const [recipe, setRecipe] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,7 +55,13 @@ function App() {
   };
 
   const handleClear = () => setRecipe('');
-  const handleCopy = () => navigator.clipboard.writeText(recipe);
+  
+  const handleCopy = () => {
+    navigator.clipboard.writeText(recipe);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   const handleSave = () => {
     const blob = new Blob([recipe], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -66,7 +73,7 @@ function App() {
     document.body.removeChild(link);
   };
 
-  // Format markdown: first line becomes bold title without ##
+  // Format markdown to show title bold without ##
   const formatRecipe = (text) => {
     if (!text) return '';
     const lines = text.split('\n');
@@ -121,12 +128,14 @@ function App() {
       </form>
 
       {recipe && (
-        <div className="recipe-text">
-          <div dangerouslySetInnerHTML={{ __html: formatRecipe(recipe) }}></div>
+        <div className="recipe-container">
+          <div className="recipe-text" dangerouslySetInnerHTML={{ __html: formatRecipe(recipe) }}></div>
           <div className="recipe-actions">
             <button className="action-btn" onClick={handleClear}>Clear</button>
-            <button className="action-btn" onClick={handleCopy}>Copy</button>
-            <button className="action-btn" onClick={handleSave}>Save as TXT</button>
+            <button className="action-btn" onClick={handleCopy}>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button className="action-btn" onClick={handleSave}>Save as PDF</button>
           </div>
         </div>
       )}
