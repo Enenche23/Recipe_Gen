@@ -1,101 +1,29 @@
-/* App.css */
-
-body {
-  margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f9fafb;
-  color: #333;
-}
-
-.app-container {
-  max-width: 800px;
-  margin: auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-h1 {
-  font-size: 2rem;
-  color: #1f2937;
-  margin-bottom: 1rem;
-}
-
-.recipe-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.recipe-form input {
-  flex: 1 1 200px;
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.generate-btn {
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  padding: 0.7rem 1.5rem;
-  font-size: 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 0.5rem;
-}
-
-.generate-btn:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-}
-
-.recipe-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 1.2rem 0;
-  color: #111827;
+.recipe-container {
+  margin-top: 2rem;
+  animation: fadeIn 0.5s ease-in;
 }
 
 .recipe-text {
   text-align: left;
-  background: #fff;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 0 5px rgba(0,0,0,0.1);
-  margin-bottom: 1rem;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  line-height: 1.6;
+  font-size: 1.05rem;
+  color: #1f2937;
 }
 
-.recipe-actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1rem;
+.recipe-text h1, .recipe-text h2 {
+  color: #2563eb;
+  margin-top: 0;
 }
 
-.action-btn {
-  background-color: #6b7280;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition: background-color 0.2s;
+.recipe-text p {
+  margin: 0.5rem 0;
 }
 
-.action-btn:hover {
-  background-color: #4b5563;
-}
-
-@media (max-width: 600px) {
-  .recipe-form {
-    flex-direction: column;
-  }
-
-  .recipe-actions {
-    flex-direction: column;
-  }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
