@@ -1,4 +1,3 @@
-// App.js
 import React, { useState } from 'react';
 import './App.css';
 import { marked } from 'marked';
@@ -12,13 +11,12 @@ function App() {
   const [complexity, setComplexity] = useState('');
   const [recipe, setRecipe] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setRecipe('');
     setLoading(true);
-
     try {
       const query = new URLSearchParams({
         ingredients,
@@ -57,19 +55,31 @@ function App() {
   };
 
   const handleClear = () => setRecipe('');
-
+  
   const handleCopy = () => {
     navigator.clipboard.writeText(recipe);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000); // hide toast after 2s
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleSave = () => {
-  const doc = new jsPDF();
-  doc.setFontSize(12);
-  doc.text(recipe, 10, 10); // basic text
-  doc.save('recipe.pdf');
-};
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const element = document.createElement('div');
+    element.innerHTML = formatRecipe(recipe); // formatted HTML
+
+    document.body.appendChild(element); // temporarily add to DOM
+
+    doc.html(element, {
+      callback: function (doc) {
+        doc.save('recipe.pdf');
+        document.body.removeChild(element); // cleanup
+      },
+      x: 10,
+      y: 10,
+      html2canvas: { scale: 0.57 },
+      autoPaging: 'text'
+    });
+  };
 
   const formatRecipe = (text) => {
     if (!text) return '';
@@ -81,9 +91,8 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <h1 className="header">🍳 AI Recipe Generator</h1>
-      
+    <div className="app-container">
+      <h1 className="app-title">AI Recipe Generator</h1>
       <div className="form-card">
         <form className="recipe-form" onSubmit={handleSubmit}>
           <input
@@ -132,13 +141,13 @@ function App() {
           <div className="recipe-text" dangerouslySetInnerHTML={{ __html: formatRecipe(recipe) }}></div>
           <div className="recipe-actions">
             <button className="action-btn" onClick={handleClear}>Clear</button>
-            <button className="action-btn" onClick={handleCopy}>Copy</button>
+            <button className="action-btn" onClick={handleCopy}>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
             <button className="action-btn" onClick={handleSave}>Save as PDF</button>
           </div>
         </div>
       )}
-
-      {showToast && <div className="toast">Copied!</div>}
     </div>
   );
 }
