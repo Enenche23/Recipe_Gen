@@ -1,3 +1,4 @@
+// App.js
 import React, { useState } from 'react';
 import './App.css';
 import { marked } from 'marked';
@@ -10,7 +11,7 @@ function App() {
   const [complexity, setComplexity] = useState('');
   const [recipe, setRecipe] = useState('');
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false); // new state to show copy success
+  const [showToast, setShowToast] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,10 +58,9 @@ function App() {
   const handleClear = () => setRecipe('');
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(recipe).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // hide after 2s
-    });
+    navigator.clipboard.writeText(recipe);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000); // hide toast after 2s
   };
 
   const handleSave = () => {
@@ -68,13 +68,12 @@ function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'recipe.pdf'; // shows as Save as PDF
+    link.download = 'recipe.txt';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Format markdown to HTML
   const formatRecipe = (text) => {
     if (!text) return '';
     const lines = text.split('\n');
@@ -85,48 +84,51 @@ function App() {
   };
 
   return (
-    <div className="app-container">
-      <h1 className="app-title">AI Recipe Generator</h1>
-      <form className="recipe-form" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Ingredients (e.g., rice, chicken, spices)"
-          value={ingredients}
-          onChange={(e) => setIngredients(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Meal Type (e.g., lunch, dinner)"
-          value={mealType}
-          onChange={(e) => setMealType(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Cuisine (e.g., Nigerian, Italian)"
-          value={cuisine}
-          onChange={(e) => setCuisine(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Cooking Time (e.g., 30 minutes)"
-          value={cookingTime}
-          onChange={(e) => setCookingTime(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Complexity (e.g., Easy, Intermediate)"
-          value={complexity}
-          onChange={(e) => setComplexity(e.target.value)}
-          required
-        />
-        <button className="generate-btn" type="submit" disabled={loading}>
-          {loading ? 'Generating...' : 'Generate Recipe'}
-        </button>
-      </form>
+    <div className="App">
+      <h1 className="header">🍳 AI Recipe Generator</h1>
+      
+      <div className="form-card">
+        <form className="recipe-form" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Ingredients (e.g., rice, chicken, spices)"
+            value={ingredients}
+            onChange={(e) => setIngredients(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Meal Type (e.g., lunch, dinner)"
+            value={mealType}
+            onChange={(e) => setMealType(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Cuisine (e.g., Nigerian, Italian)"
+            value={cuisine}
+            onChange={(e) => setCuisine(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Cooking Time (e.g., 30 minutes)"
+            value={cookingTime}
+            onChange={(e) => setCookingTime(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Complexity (e.g., Easy, Intermediate)"
+            value={complexity}
+            onChange={(e) => setComplexity(e.target.value)}
+            required
+          />
+          <button className="generate-btn" type="submit" disabled={loading}>
+            {loading ? 'Generating...' : 'Generate Recipe'}
+          </button>
+        </form>
+      </div>
 
       {recipe && (
         <div className="recipe-container">
@@ -136,9 +138,10 @@ function App() {
             <button className="action-btn" onClick={handleCopy}>Copy</button>
             <button className="action-btn" onClick={handleSave}>Save as PDF</button>
           </div>
-          {copied && <div className="copy-alert">Copied!</div>}
         </div>
       )}
+
+      {showToast && <div className="toast">Copied!</div>}
     </div>
   );
 }
