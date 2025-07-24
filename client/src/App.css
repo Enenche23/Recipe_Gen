@@ -1,3 +1,76 @@
+/* App.css */
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9fafb;
+  color: #333;
+}
+
+.app-container {
+  max-width: 800px;
+  margin: auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+h1 {
+  font-size: 2rem;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.recipe-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.recipe-form input {
+  flex: 1 1 200px;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.recipe-form input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.generate-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.generate-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.generate-btn:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.copy-alert {
+  margin-top: 0.8rem;
+  color: #10b981;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease-in;
+}
+
 .recipe-container {
   margin-top: 2rem;
   animation: fadeIn 0.5s ease-in;
@@ -21,6 +94,38 @@
 
 .recipe-text p {
   margin: 0.5rem 0;
+}
+
+.recipe-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.action-btn {
+  background-color: #6b7280;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.2s;
+}
+
+.action-btn:hover {
+  background-color: #4b5563;
+}
+
+@media (max-width: 600px) {
+  .recipe-form {
+    flex-direction: column;
+  }
+
+  .recipe-actions {
+    flex-direction: column;
+  }
 }
 
 @keyframes fadeIn {
