@@ -66,7 +66,7 @@ function App() {
     document.body.removeChild(link);
   };
 
-  // Format the markdown to show title bold without ##
+  // Format markdown: first line becomes bold title without ##
   const formatRecipe = (text) => {
     if (!text) return '';
     const lines = text.split('\n');
@@ -121,12 +121,12 @@ function App() {
       </form>
 
       {recipe && (
-        <div className="recipe-container">
+        <div className="recipe-text">
           <div dangerouslySetInnerHTML={{ __html: formatRecipe(recipe) }}></div>
           <div className="recipe-actions">
-            <button onClick={handleClear}>Clear</button>
-            <button onClick={handleCopy}>Copy</button>
-            <button onClick={handleSave}>Save as PDF</button>
+            <button className="action-btn" onClick={handleClear}>Clear</button>
+            <button className="action-btn" onClick={handleCopy}>Copy</button>
+            <button className="action-btn" onClick={handleSave}>Save as TXT</button>
           </div>
         </div>
       )}
