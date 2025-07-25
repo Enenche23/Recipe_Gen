@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import { marked } from 'marked';
+// eslint-disable-next-line
 import html2pdf from 'html2pdf.js';
 
 function App() {
@@ -13,39 +14,37 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setRecipe('');
     setLoading(true);
-    try {
-      const query = new URLSearchParams({ ingredients, mealType, cuisine, cookingTime, complexity }).toString();
-      const url = `https://recipe-backend-47av.onrender.com/recipeStream?${query}`;
-      console.log('Connecting to:', url);
+    const query = new URLSearchParams({ ingredients, mealType, cuisine, cookingTime, complexity }).toString();
+    const url = `https://recipe-backend-47av.onrender.com/recipeStream?${query}`;
+    console.log('Connecting to:', url);
 
-      const eventSource = new EventSource(url);
-      let accumulated = '';
-      eventSource.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.action === 'chunk') {
-          accumulated += data.chunk;
-          setRecipe(accumulated);
-        } else if (data.action === 'close') {
-          eventSource.close();
-          setLoading(false);
-        }
-      };
-      eventSource.onerror = (err) => {
-        console.error('EventSource failed:', err);
+    const eventSource = new EventSource(url);
+    let accumulated = '';
+
+    eventSource.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.action === 'chunk') {
+        accumulated += data.chunk;
+        setRecipe(accumulated);
+      } else if (data.action === 'close') {
         eventSource.close();
         setLoading(false);
-      };
-    } catch (error) {
-      console.error('Error:', error);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('EventSource failed:', err);
+      eventSource.close();
       setLoading(false);
-    }
+    };
   };
 
   const handleClear = () => setRecipe('');
+
   const handleCopy = () => {
     navigator.clipboard.writeText(recipe);
     setCopied(true);
@@ -55,12 +54,17 @@ function App() {
   const handleSave = () => {
     const element = document.createElement('div');
     element.innerHTML = formatRecipe(recipe);
+    element.style.padding = '20px';
+    element.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+    element.style.fontSize = '12pt';
+    element.style.textAlign = 'justify'; // make text justified
+
     const opt = {
-      margin:       [0.5, 0.5, 0.5, 0.5],
-      filename:     'recipe.pdf',
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename: 'recipe.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
     html2pdf().set(opt).from(element).save();
   };
